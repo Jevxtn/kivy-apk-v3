@@ -2,47 +2,43 @@ name: Build Kivy APK
 
 on:
   push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+    branches: [ main ]
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     steps:
-      - name: Checkout Repository
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.10"
-
-      - name: Install Android SDK & NDK
+      # Install dependencies required for Buildozer & Kivy
+      - name: Install Dependencies
         run: |
           sudo apt update
-          sudo apt install -y openjdk-17-jdk unzip zip
-          wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
-          mkdir -p $HOME/cmdline-tools
-          unzip commandlinetools-linux-9477386_latest.zip -d $HOME/cmdline-tools
-          export ANDROID_HOME=$HOME/cmdline-tools
-          export PATH=$ANDROID_HOME/bin:$PATH
-          sdkmanager --install "platform-tools" "platforms;android-33" "build-tools;33.0.0" "ndk;25.1.8937393"
+          sudo apt install -y python3-pip python3-setuptools python3-venv git zip unzip \
+            libffi-dev libssl-dev autoconf automake build-essential ccache \
+            libtool pkg-config zlib1g-dev libncurses5 libncurses5-dev
 
-      - name: Install Buildozer & Dependencies
+      # Install Buildozer and Cython
+      - name: Install Buildozer and Cython
         run: |
           pip install --upgrade pip
-          pip install buildozer cython virtualenv
+          pip install buildozer Cython virtualenv
 
+      # Ensure clean build (optional)
       - name: Clean Build Cache
         run: |
           rm -rf .buildozer bin dist
 
+      # Build APK with Buildozer (it will use SDK/NDK from buildozer.spec)
       - name: Build APK
-        run: |
-          buildozer -v android debug
+        uses: digreatbrian/buildozer-action@v2
+        with:
+          python-version: 3.10
+          buildozer-cmd: buildozer -v android debug
 
+      # Upload the built APK as an artifact
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
